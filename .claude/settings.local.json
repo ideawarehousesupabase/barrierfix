@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Get-NetTCPConnection -State Listen -LocalPort 4000,5173,4040,9099 -ErrorAction SilentlyContinue | Select-Object LocalPort, OwningProcess | Format-Table -AutoSize; try { \\(Invoke-RestMethod -Uri http://127.0.0.1:4040/api/tunnels -TimeoutSec 3\\).tunnels | Select-Object public_url, @{n='to';e={$_.config.addr}} | Format-Table -AutoSize } catch { 'ngrok local API not reachable' })",
+      "Bash(timeout 60 node --input-type=module -e ' *)",
+      "Bash(powershell -NoProfile -Command 'Get-NetTCPConnection -State Listen -LocalPort 4000 -ErrorAction SilentlyContinue | ForEach-Object { \\(Get-Process -Id $_.OwningProcess\\).StartTime }')"
+    ]
+  }
+}

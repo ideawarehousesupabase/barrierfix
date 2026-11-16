@@ -1,0 +1,5 @@
+employee_email,rule_code,params,note
+jordan@example.com,TS1,,
+jordan@example.com,TM1,,
+jordan@example.com,TM2,daysBefore=1;time=12:00,
+jordan@example.com,MT1,hoursBefore=24,

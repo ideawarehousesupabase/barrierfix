@@ -1,0 +1,50 @@
+id,brief_text,sent_at,rules,expected_is_task,expected_deadline,expected_steps,candidate_translation,expected_validator
+1,"Can you pull together the Q3 review deck for Harbour & Co by Thursday? Use last quarter's as a base, add the new campaign numbers and flag anything that needs Sam's input.",2026-09-21T10:00:00+01:00,TS1;TM1;TM2,yes,2026-09-24 17:00,3,,
+2,"Please send the signed contract to Acme by 3pm tomorrow.",2026-09-21T10:00:00+01:00,TS1;TM1,yes,2026-09-22 15:00,0,,
+3,"Could you update the client tracker and email the summary to Priya by end of the week?",2026-09-21T10:00:00+01:00,TS1;TM1,yes,2026-09-25 17:00,2,,
+4,"Thanks for today, great work!",2026-09-21T10:00:00+01:00,TS1;TM1,no,none,,,
+5,"Morning all!",2026-09-21T10:00:00+01:00,TS1;TM1,no,none,,,
+6,"FYI the client meeting moved to Friday at 2pm.",2026-09-21T10:00:00+01:00,TS1;TM1,no,none,,,
+7,"Can you book a meeting room for Monday's workshop?",2026-09-21T10:00:00+01:00,TS1;TM1,yes,none,0,,
+8,"Please review the draft blog post by Wednesday morning and leave comments in the doc.",2026-09-21T10:00:00+01:00,TS1;TM1,yes,2026-09-23 12:00,2,,
+9,"Can you send me the invoice ASAP?",2026-09-21T10:00:00+01:00,TS1;TM1;CM3,yes,none,0,,
+10,"Need the final slides by EOD please.",2026-09-21T10:00:00+01:00,TS1;TM1,yes,2026-09-21 17:00,0,,
+11,"By next Friday, can you finish the onboarding pack for Ravi?",2026-09-21T10:00:00+01:00,TS1;TM1,yes,2026-10-02 17:00,0,,
+12,"Please file the expenses within 2 working days.",2026-09-21T10:00:00+01:00,TS1;TM1,yes,2026-09-23 17:00,0,,
+13,"Hi Jordan, could you proofread the press release by 24/09 and send it back to me?",2026-09-21T10:00:00+01:00,TS1;TM1,yes,2026-09-24 17:00,2,,
+14,"Can you send the invoice to Acme by Friday? Also, please book the meeting room for Thursday.",2026-09-21T10:00:00+01:00,TS1;TM1;TS3,yes,2026-09-25 17:00,0,,
+15,"Don't send the report to the client until Sam has checked it.",2026-09-21T10:00:00+01:00,TS1;TM1,yes,none,0,,
+16,"Let's circle back on the budget next week.",2026-09-21T10:00:00+01:00,CM1,no,none,,,
+17,"Could you have a look at the proposal when you get a chance?",2026-09-21T10:00:00+01:00,TS1;TM1;CM1,yes,none,0,,
+18,"Please prepare the agenda for Thursday's board meeting by Wednesday at noon.",2026-09-21T10:00:00+01:00,TS1;TM1,yes,2026-09-23 12:00,0,,
+19,"Can you chase the three overdue invoices, update the cashflow sheet and let me know the total by 4pm today?",2026-09-21T10:00:00+01:00,TS1;TM1,yes,2026-09-21 16:00,3,,
+20,"Lovely, thanks!",2026-09-21T10:00:00+01:00,TS1,no,none,,,
+21,"When the numbers are in, please update the forecast and send it to finance.",2026-09-21T10:00:00+01:00,TS1;TM1,yes,none,0,,
+22,"Please order 30 chairs for the open day by Friday.",2026-09-21T10:00:00+01:00,TS1;TM1,yes,2026-09-25 17:00,0,,
+23,"Can you pull together the Q3 review deck for Harbour & Co by Thursday? Use last quarter's as a base, add the new campaign numbers and flag anything that needs Sam's input.",2026-09-21T10:00:00+01:00,TS1;TM1,yes,2026-09-24 17:00,3,"Task: Pull together the Q3 review deck for Harbour & Co
+Due: Thursday 24 September at 5pm
+1. Use last quarter's as a base.
+2. Add the new campaign numbers.
+3. Flag anything that needs Sam's input.",pass
+24,"Can you pull together the Q3 review deck for Harbour & Co by Thursday? Use last quarter's as a base, add the new campaign numbers and flag anything that needs Sam's input.",2026-09-21T10:00:00+01:00,TS1;TM1,yes,2026-09-24 17:00,3,"Task: Pull together the Q3 review deck for Harbour & Co
+Due: Friday 25 September at 5pm
+1. Use last quarter's as a base.
+2. Add the new campaign numbers.
+3. Flag anything that needs Sam's input.",hold
+25,"Can you pull together the Q3 review deck for Harbour & Co by Thursday? Use last quarter's as a base, add the new campaign numbers and flag anything that needs Sam's input.",2026-09-21T10:00:00+01:00,TS1;TM1,yes,2026-09-24 17:00,3,"Task: Pull together the Q3 review deck for Harbour & Co
+Due: Thursday 24 September at 5pm
+1. Use last quarter's as a base.
+2. Add the new campaign numbers.",hold
+26,"Can you pull together the Q3 review deck for Harbour & Co by Thursday? Use last quarter's as a base, add the new campaign numbers and flag anything that needs Sam's input.",2026-09-21T10:00:00+01:00,TS1;TM1,yes,2026-09-24 17:00,3,"Task: Pull together the Q3 review deck for Harbour & Co
+Due: Thursday 24 September at 5pm
+1. Use last quarter's as a base.
+2. Add the new campaign numbers.
+3. Flag anything that needs Sam's input.
+4. Send it to Alex for sign-off.",hold
+27,"Don't send the report to the client until Sam has checked it.",2026-09-21T10:00:00+01:00,TS1,yes,none,0,"Task: Send the report to the client until Sam has checked it.",hold
+28,"Please order 30 chairs for the open day by Friday.",2026-09-21T10:00:00+01:00,TS1;TM1,yes,2026-09-25 17:00,0,"Task: Order 50 chairs for the open day
+Due: Friday 25 September at 5pm",hold
+29,"Please upload the new logo to https://example.com/brand by Monday.",2026-09-21T10:00:00+01:00,TS1;TM1,yes,2026-09-28 17:00,0,"Task: Upload the new logo
+Due: Monday 28 September at 5pm",hold
+30,"Please upload the new logo to https://example.com/brand by Monday.",2026-09-21T10:00:00+01:00,TS1;TM1,yes,2026-09-28 17:00,0,"Task: Upload the new logo to https://example.com/brand
+Due: Monday 28 September at 5pm",pass

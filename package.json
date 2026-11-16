@@ -1,0 +1,26 @@
+{
+  "name": "barrierfix",
+  "private": true,
+  "version": "0.1.0",
+  "description": "BarrierFix MVP: agreed workplace adjustments applied to everyday tasks (MERN)",
+  "workspaces": [
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "dev": "concurrently -k -n auth,api,web -c magenta,blue,green \"npm:emulators\" \"npm:dev:server\" \"npm:dev:client\"",
+    "dev:local": "node scripts/dev-local.mjs",
+    "dev:server": "npm run dev -w server",
+    "dev:client": "npm run dev -w client",
+    "emulators": "firebase emulators:start --only auth --project demo-barrierfix",
+    "seed": "npm run seed -w server",
+    "create-platform-admin": "npm run create-platform-admin -w server --",
+    "test": "npm test -w server",
+    "build": "npm run build -w client",
+    "start": "npm start -w server"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0",
+    "firebase-tools": "^13.0.0"
+  }
+}

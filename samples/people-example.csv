@@ -1,0 +1,5 @@
+name,email,roles,manager_email,job_title,slack_user_id
+Priya Shah,priya@example.com,manager,,Client services director,
+Jordan Lee,jordan@example.com,employee,priya@example.com,Account executive,
+Hana Reid,hana@example.com,hr,,Operations lead,
+Sam Patel,sam@example.com,employee;manager,priya@example.com,Designer,

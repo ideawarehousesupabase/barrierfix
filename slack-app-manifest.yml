@@ -1,0 +1,55 @@
+# BarrierFix Slack app manifest.
+# 1. Replace every YOUR-API-DOMAIN with the public HTTPS address of the API server
+#    (the value of API_PUBLIC_URL in .env, without a trailing slash).
+# 2. Go to https://api.slack.com/apps > Create New App > From an app manifest,
+#    choose a workspace you own, and paste this file.
+# 3. Copy Client ID, Client Secret and Signing Secret (Basic Information) into .env.
+display_information:
+  name: BarrierFix
+  description: Applies agreed workplace adjustments to the tasks you send.
+  background_color: "#1f5fbf"
+  long_description: BarrierFix turns tasks sent in Slack into the format each person has agreed works for them, such as numbered steps and exact deadlines, and checks that the goal, deadline and deliverable are unchanged. It only processes messages that mention someone with an agreed Adjustment Profile; all other messages are ignored and never stored.
+features:
+  app_home:
+    home_tab_enabled: true
+    messages_tab_enabled: true
+    messages_tab_read_only_enabled: true
+  bot_user:
+    display_name: BarrierFix
+    always_online: true
+  shortcuts:
+    - name: Create structured task
+      type: message
+      callback_id: create_structured_task
+      description: Turn this message into a structured task in the person's agreed format, with a preview before it is sent
+  slash_commands:
+    - command: /brief
+      url: https://renewably-liqueur-aluminum.ngrok-free.dev/slack/events
+      description: Send a task in someone's agreed format
+      usage_hint: "@person the task"
+      should_escape: true
+oauth_config:
+  redirect_urls:
+    - https://renewably-liqueur-aluminum.ngrok-free.dev/slack/oauth/callback
+  scopes:
+    bot:
+      - channels:history
+      - groups:history
+      - chat:write
+      - im:write
+      - commands
+      - users:read
+      - users:read.email
+settings:
+  event_subscriptions:
+    request_url: https://renewably-liqueur-aluminum.ngrok-free.dev/slack/events
+    bot_events:
+      - message.channels
+      - message.groups
+      - app_home_opened
+  interactivity:
+    is_enabled: true
+    request_url: https://renewably-liqueur-aluminum.ngrok-free.dev/slack/events
+  org_deploy_enabled: false
+  socket_mode_enabled: false
+  token_rotation_enabled: false
