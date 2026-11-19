@@ -266,6 +266,23 @@ test('the employee\'s buttons work only for the employee', async () => {
   assert.ok((await t.models.Brief.findById(id)).breakdown?.result?.length);
 });
 
+test('a flagged task corrected on the web replaces the employee\'s Slack message, with its buttons back', async () => {
+  const id = ids.delivered;
+  const cards = (await t.as(MGR).get(`/api/briefs/${id}`)).body.brief.deliveredCards;
+  const edited = JSON.parse(JSON.stringify(cards));
+  edited[0].sections.find((s) => s.key === 'task').text = 'Send the corrected report to the finance team';
+  const n = calls.length;
+  const res = await t.as(MGR).post(`/api/briefs/${id}/correct`, { cards: edited });
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  const update = since(n).find((c) => c.name === 'chat.update');
+  assert.ok(update, 'the Slack message is updated in place');
+  const blocks = json(update.args.blocks);
+  assert.match(blocks, /Send the corrected report to the finance team/);
+  assert.match(blocks, /checked and edited this version for you/);
+  assert.match(blocks, /bf_confirm/, 'the employee can confirm the corrected task');
+  assert.ok(since(n).some((c) => c.name === 'chat.postMessage' && c.args.channel === 'UEMP' && /corrected a task you flagged/.test(c.args.text)), 'and is told in Slack');
+});
+
 test('editing a message refreshes its preview; deleting it withdraws a delivered task', async () => {
   await mention('<@UEMP> please send the brochure by Friday', '104.1');
   const first = await t.models.Brief.findOne({ 'slack.ts': '104.1' });

@@ -12,6 +12,7 @@ import {
   askQuestion,
   cancelBrief,
   confirmTask,
+  correctFlagged,
   createBrief,
   discardDraft,
   flagTranslation,
@@ -259,6 +260,21 @@ router.post(
   '/:id/resolve',
   validate(z.object({ action: z.enum(['approve', 'edit', 'keep_original']), text: z.string().max(8000).optional() })),
   managerAction((req, brief) => resolveHeld(brief, req.user, req.org, req.body)),
+);
+// The employee flagged the task as wrong: the sender edits what the employee received and sends it again.
+const correctedSection = z.object({
+  type: z.string().max(20),
+  key: z.string().max(40).optional(),
+  text: z.string().max(4000).nullish(),
+  items: z.array(z.string().max(4000)).max(60).optional(),
+});
+router.post(
+  '/:id/correct',
+  validate(z.object({ cards: z.array(z.object({ sections: z.array(correctedSection).max(80) })).max(20) })),
+  managerAction(async (req, brief) => {
+    const { timesChanged } = await correctFlagged(brief, req.user, req.org, req.body);
+    await audit(req, 'brief.corrected', { entity: 'Brief', entityId: brief._id, meta: { timesChanged } });
+  }),
 );
 router.post(
   '/:id/cancel',

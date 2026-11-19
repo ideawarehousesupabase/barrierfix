@@ -7,7 +7,7 @@ import { Profile, User } from '../../models/index.js';
 import { audit } from '../../services/audit.js';
 import { notify, usersWithRole } from '../../services/notify.js';
 import { parseCsv } from '../../utils/csv.js';
-import { ah, badRequest, forbidden, notFound, sendPdf } from '../../utils/http.js';
+import { ah, badRequest, conflict, forbidden, notFound, sendPdf } from '../../utils/http.js';
 import { medicalWarning } from '../../utils/medicalGuard.js';
 import { buildPdf } from '../../utils/pdf.js';
 import { cancelReviews } from '../reviews/service.js';
@@ -145,6 +145,44 @@ router.post(
     });
     await audit(req, 'profile.submitted', { entity: 'Profile', entityId: profile._id });
     res.json({ profile: await serializeProfile(profile, req.user, await ruleMap(), req.user) });
+  }),
+);
+
+// From the Rule Library: the employee asks for one rule in one step. It is added to their profile
+// and sent to their manager straight away, as if they had added it on their profile page and then
+// sent it for agreement. Agreed rules keep applying until the manager agrees the new one.
+router.post(
+  '/me/rules',
+  requireRole('employee'),
+  validate(ruleInput.extend({ consent: z.boolean().optional() })),
+  ah(async (req, res) => {
+    const rules = await ruleMap();
+    const lib = rules.get(req.body.code);
+    if (!lib || !lib.active) throw badRequest(`Unknown rule ${req.body.code}`);
+    const params = cleanParams(lib, req.body.params);
+    const profile = await getOrCreateProfile(req.org, req.user);
+    if (profile.rules.some((r) => r.code === lib.code && r.status !== 'removed')) throw conflict(`"${lib.name}" is already in your Adjustment Profile`);
+    if (!profile.consent?.given && req.body.consent !== true) {
+      throw badRequest('Please confirm you agree to BarrierFix applying your rules to tasks sent to you', { code: 'consent_required' });
+    }
+    const now = new Date();
+    profile.rules.push({ code: lib.code, params, note: req.body.note, status: 'proposed', addedBy: req.user._id, source: 'employee' });
+    if (!profile.consent?.given) profile.consent = { given: true, givenAt: now };
+    profile.status = 'proposed';
+    profile.submittedAt = now;
+    profile.history.push({ by: req.user._id, action: 'rule_requested', detail: lib.code });
+    profile.markModified('rules');
+    await profile.save();
+    const waiting = profile.rules.filter((r) => r.status === 'proposed' || (r.status === 'agreed' && r.pending)).length;
+    await notify(await managerOrHr(req.user), {
+      kind: 'profile_submitted',
+      title: `${req.user.name || req.user.email} asked you to agree "${lib.name}"`,
+      body: `Requested from the Rule Library. ${waiting} rule(s) to review in their Adjustment Profile.`,
+      link: `/team/${req.user._id}`,
+      channels: ['email', 'slack'],
+    });
+    await audit(req, 'profile.rule_requested', { entity: 'Profile', entityId: profile._id, meta: { code: lib.code } });
+    res.status(201).json({ profile: await serializeProfile(profile, req.user, rules, req.user), warning: medicalWarning(req.body.note) });
   }),
 );
 

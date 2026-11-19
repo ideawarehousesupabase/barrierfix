@@ -1,6 +1,7 @@
 import { config } from '../../config/env.js';
 import { hasFeature } from '../../config/plans.js';
 import { ENGINE_NAME, breakdownBrief, translateBrief } from '../../engine/index.js';
+import { sectionsToText } from '../../engine/render.js';
 import { taskBlocks } from '../../integrations/slack/blocks.js';
 import { sendSlackDm, slackClientForOrg, updateSlackMessage } from '../../integrations/slack/messaging.js';
 import { Brief, BriefMetric, Profile, ScheduledPrompt, User } from '../../models/index.js';
@@ -46,6 +47,7 @@ const needsInfo = (missing) => new HttpError(422, `Before this can be sent, plea
 
 function deliveredCards(brief) {
   if (brief.deliveredVersion === 'translated') return brief.result?.cards || [];
+  if (brief.deliveredVersion === 'manager_edited' && brief.managerEditedCards?.length) return brief.managerEditedCards;
   const text = brief.deliveredVersion === 'manager_edited' ? brief.managerEditedText : brief.originalText;
   return [{ index: 0, total: 1, mrkdwn: text, text, sections: [{ type: 'text', key: 'details', items: text.split('\n').filter(Boolean), origin: 'content' }] }];
 }
@@ -339,6 +341,87 @@ export async function resolveHeld(brief, manager, org, { action, text }) {
   await audit(manager, `brief.held_${action}`, { entity: 'Brief', entityId: brief._id, orgId: org._id });
   emitToUser(brief.managerId, 'brief:updated', { id: String(brief._id) });
   return brief;
+}
+
+// Parts of a task that hold a time. When one changes, reminders scheduled for the old time are wrong.
+const TIME_KEYS = new Set(['due', 'checkin', 'reminder']);
+const MAX_LINE = 2000;
+const keepLayout = () => badRequest('Please keep every part of the task as it is laid out. You can only change the wording.');
+const partName = (s) => (s.label ? `"${s.label}"` : 'This part');
+
+// The manager's edited copy of the delivered cards. Only the wording changes: every card and part
+// stays where it was, so the employee still gets their agreed format. Headings and dividers are
+// kept as they were; an emptied note is left out; any other part cannot be left empty.
+function mergeCorrection(current, edited) {
+  if (!Array.isArray(edited) || !current.length || edited.length !== current.length) throw keepLayout();
+  let changed = false;
+  let timesChanged = false;
+  const cards = current.map((card, i) => {
+    const next = edited[i]?.sections;
+    if (!Array.isArray(next) || next.length !== card.sections.length) throw keepLayout();
+    const sections = [];
+    card.sections.forEach((s, j) => {
+      const e = next[j];
+      if (!e || e.type !== s.type || (e.key || '') !== (s.key || '')) throw keepLayout();
+      if (s.type === 'divider' || s.type === 'heading') return sections.push(s);
+      if (s.type === 'list' || s.type === 'text') {
+        const items = (Array.isArray(e.items) ? e.items : []).map((x) => String(x ?? '').trim()).filter(Boolean);
+        if (!items.length) throw badRequest(`${partName(s)} cannot be empty`);
+        if (items.some((x) => x.length > MAX_LINE)) throw badRequest(`${partName(s)} is too long`);
+        if (JSON.stringify(items) !== JSON.stringify(s.items || [])) changed = true;
+        return sections.push({ ...s, items });
+      }
+      const text = String(e.text ?? '').trim();
+      if (text.length > MAX_LINE) throw badRequest(`${partName(s)} is too long`);
+      if (text === (s.text || '')) return sections.push(s);
+      if (!text && s.type !== 'note') throw badRequest(`${partName(s)} cannot be empty`);
+      changed = true;
+      if (TIME_KEYS.has(s.key)) timesChanged = true;
+      if (text) sections.push({ ...s, text, ...(TIME_KEYS.has(s.key) ? { value: null } : {}) });
+    });
+    const visible = sections.filter((s) => s.type !== 'divider');
+    return { ...card, sections, text: sectionsToText(visible, false), mrkdwn: sectionsToText(visible, true) };
+  });
+  return { cards, changed, timesChanged };
+}
+
+// The employee flagged the task as wrong; the sender corrects what the employee received and sends it
+// back. It replaces the delivered version everywhere (web and Slack), and the employee checks it again.
+export async function correctFlagged(brief, manager, org, { cards }) {
+  if (['cancelled', 'superseded', 'draft'].includes(brief.status)) throw badRequest('This task was withdrawn or replaced, so it cannot be corrected');
+  if (brief.status === 'held') throw badRequest('This task is still waiting for your check. Approve it, edit it or keep your original first.');
+  if (brief.employeeStatus !== 'flagged') throw badRequest('Only a task flagged as wrong can be corrected here');
+  const merged = mergeCorrection(deliveredCards(brief), cards);
+  if (!merged.changed) throw badRequest('You have not changed anything yet');
+  const now = new Date();
+  brief.managerEditedCards = merged.cards;
+  brief.managerEditedText = merged.cards.map((c) => c.text).join('\n\n');
+  brief.deliveredVersion = 'manager_edited';
+  brief.correctedAt = now;
+  brief.employeeStatus = 'new';
+  brief.flag = { ...(brief.toObject().flag || {}), resolvedAt: now };
+  let note = 'Corrected the task after it was flagged as wrong.';
+  if (merged.timesChanged) {
+    const { modifiedCount } = await cancelPrompts(brief._id);
+    if (modifiedCount) note += ' A time was changed, so the automatic reminders for the old time were switched off.';
+  }
+  brief.thread.push({ authorId: manager._id, kind: 'note', text: note });
+  brief.markModified('managerEditedCards');
+  await brief.save();
+  await updateMetric(brief, {});
+  const task = merged.cards[0]?.sections.find((s) => s.key === 'task')?.text;
+  await notify(brief.employeeId, {
+    kind: 'task_corrected',
+    title: `${displayName(manager)} corrected a task you flagged`,
+    body: task || brief.result?.summaries?.[0]?.title || '',
+    link: `/tasks/${brief._id}`,
+    channels: ['slack'],
+  });
+  emitToUser(brief.employeeId, 'brief:updated', { id: String(brief._id) });
+  emitToUser(brief.managerId, 'brief:updated', { id: String(brief._id) });
+  // The employee's Slack message shows the corrected version, with its buttons back.
+  await refreshSlackStatus(brief);
+  return { brief, timesChanged: merged.timesChanged };
 }
 
 export async function cancelBrief(brief, manager, status = 'cancelled') {

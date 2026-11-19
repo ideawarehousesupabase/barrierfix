@@ -22,7 +22,7 @@ function checkinTime(deadline, params, ctx) {
   return { at: cal.addWorkingMinutes(now, half), adjusted: true };
 }
 
-function sectionsToText(sections, mrkdwn) {
+export function sectionsToText(sections, mrkdwn) {
   const b = (s) => (mrkdwn ? `*${s}*` : s);
   const lines = [];
   for (const s of sections) {

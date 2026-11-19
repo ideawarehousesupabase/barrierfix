@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Alert, Badge, Card, ErrorAlert, Loading, PageHeader, Stat } from '../components/ui.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { api } from '../lib/api.js';
-import { PROFILE_STATUS, pct } from '../lib/format.js';
+import { PROFILE_STATUS } from '../lib/format.js';
 
 function EmployeePanel({ data }) {
   const { hasRole } = useAuth();
@@ -39,6 +39,34 @@ function EmployeePanel({ data }) {
         {!hasRole('hr') && <Link className="btn btn-ghost" to="/decisions/new">Send a request</Link>}
       </div>
     </Card>
+  );
+}
+
+// Figures for the manager's own team. "Pending" ones are what is waiting today.
+function ManagerAnalytics({ a }) {
+  const days = a.periodDays || 30;
+  return (
+    <>
+      <h3 style={{ marginTop: '1rem' }}>Adjustment Decision Record (Last {days} days)</h3>
+      <div className="stats">
+        <Stat label="Rule approval pending" value={a.decisions.pending} />
+        <Stat label="Rules agreed" value={a.decisions.agreed} />
+        <Stat label="Rules declined" value={a.decisions.declined} />
+        <Stat label="Pending HR decision" value={a.decisions.pendingHr} />
+      </div>
+      <h3>Tasks (Last {days} days)</h3>
+      <div className="stats">
+        <Stat label="Tasks delivered in agreed formats" value={a.tasks.delivered} />
+        <Stat label="Questions pending" value={a.tasks.questionsPending} />
+        <Stat label="Flagged tasks pending" value={a.tasks.flaggedPending} />
+      </div>
+      <h3>Reviews (Last {days} days)</h3>
+      <div className="stats">
+        <Stat label="Reviews pending" value={a.reviews.pending} />
+        <Stat label="Reviews completed" value={a.reviews.completed} />
+        <Stat label={`Upcoming reviews (next ${days} days)`} value={a.reviews.upcoming} />
+      </div>
+    </>
   );
 }
 
@@ -96,17 +124,7 @@ function ManagerPanel({ data }) {
       ) : (
         <p className="muted">Nobody reports to you yet. Add the employees in your team under People.</p>
       )}
-      {data.detailed && data.kpis && (
-        <>
-          <h3 style={{ marginTop: '1rem' }}>Last 30 days</h3>
-          <div className="stats">
-            <Stat label="Tasks delivered in agreed formats" value={data.kpis.tasksTranslated} />
-            <Stat label="Meaning preserved" value={pct(data.kpis.meaningPreservedPct)} hint="Outcome check passed" />
-            <Stat label="Rated accurate" value={pct(data.kpis.ratedAccuratePct)} hint="Confirmed vs flagged" />
-            <Stat label="Questions asked" value={data.kpis.questions} />
-          </div>
-        </>
-      )}
+      {data.detailed && data.analytics && <ManagerAnalytics a={data.analytics} />}
     </Card>
   );
 }

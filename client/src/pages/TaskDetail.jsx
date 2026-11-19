@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { Modal } from '../components/Modal.jsx';
 import { DualView, OriginalText, RuleChips, TaskCards, ValidatorPanel } from '../components/TaskView.jsx';
-import { Alert, Badge, Button, Card, ErrorAlert, Loading, PageHeader, TextArea, useToast } from '../components/ui.jsx';
+import { Alert, Badge, Button, Card, ErrorAlert, Field, Loading, PageHeader, TextArea, useToast } from '../components/ui.jsx';
 import { api } from '../lib/api.js';
 import { BRIEF_STATUS, SOURCE_LABELS, TASK_STATUS, fmtDate, fmtDateTime } from '../lib/format.js';
 
@@ -61,7 +62,7 @@ function EmployeeActions({ brief, act, busy }) {
         </Button>
         <Button variant="secondary" onClick={() => setMode(mode === 'question' ? null : 'question')} aria-expanded={mode === 'question'}>Ask a question</Button>
         <Button variant="secondary" onClick={() => act('breakdown')} busy={busy === 'breakdown'}>Break it down further</Button>
-        {brief.deliveredVersion === 'translated' && (
+        {brief.deliveredVersion !== 'original' && (
           <Button variant="danger" onClick={() => setMode(mode === 'flag' ? null : 'flag')} aria-expanded={mode === 'flag'}>Flag as wrong</Button>
         )}
       </div>
@@ -128,11 +129,108 @@ function ManagerPanel({ brief, act, busy }) {
   );
 }
 
+const TIME_KEYS = ['due', 'checkin', 'reminder'];
+const copyCards = (cards) => cards.map((c) => ({ ...c, sections: c.sections.map((s) => ({ ...s, ...(s.items ? { items: [...s.items] } : {}) })) }));
+const wordsOf = (cards) => JSON.stringify(cards.map((c) => c.sections.map((s) => [s.text ?? null, s.items ?? null])));
+
+// One part of the task as an editable box. Headings and dividers stay as they are.
+function EditSection({ s, onChange }) {
+  if (s.type === 'heading') return <p className="heading">{s.text}</p>;
+  if (s.type === 'divider') return <hr />;
+  if (s.type === 'list' || s.type === 'text') {
+    const name = s.label || 'Message';
+    return (
+      <fieldset className="field">
+        <legend>{name}</legend>
+        <p className="hint">{s.type === 'list' ? 'Leave a step empty to remove it.' : 'Leave a paragraph empty to remove it.'}</p>
+        {s.items.map((item, j) => (
+          <div className="step-row" key={j}>
+            {s.type === 'list' && <span aria-hidden="true">{j + 1}.</span>}
+            {s.type === 'list' ? (
+              <input type="text" aria-label={`Step ${j + 1}`} maxLength={2000} value={item} onChange={(e) => onChange({ items: s.items.map((x, k) => (k === j ? e.target.value : x)) })} />
+            ) : (
+              <textarea aria-label={`${name}, paragraph ${j + 1}`} rows={2} maxLength={2000} style={{ minHeight: '3.5rem' }} value={item} onChange={(e) => onChange({ items: s.items.map((x, k) => (k === j ? e.target.value : x)) })} />
+            )}
+          </div>
+        ))}
+        <Button variant="ghost" size="small" onClick={() => onChange({ items: [...s.items, ''] })}>{s.type === 'list' ? 'Add a step' : 'Add a paragraph'}</Button>
+      </fieldset>
+    );
+  }
+  const isTime = TIME_KEYS.includes(s.key);
+  return (
+    <Field label={s.type === 'note' ? 'Note' : s.label} hint={isTime ? 'If you change this time, the automatic reminders for this task are switched off.' : s.type === 'note' ? 'Leave it empty to remove the note.' : undefined}>
+      {(a) => <input {...a} type="text" maxLength={2000} value={s.text || ''} onChange={(e) => onChange({ text: e.target.value })} />}
+    </Field>
+  );
+}
+
+// The employee flagged the task as wrong: the sender corrects what the employee received and sends it again.
+// Only the wording changes, so the employee still gets the layout of their agreed format.
+function CorrectTask({ brief, onClose, onSent }) {
+  const [cards, setCards] = useState(() => copyCards(brief.deliveredCards));
+  const [error, setError] = useState('');
+  const send = useMutation({
+    mutationFn: () => api.post(`/api/briefs/${brief._id}/correct`, { cards: cards.map((c) => ({ sections: c.sections.map(({ type, key, text, items }) => ({ type, key, text, items })) })) }),
+    onSuccess: onSent,
+  });
+  const setSection = (ci, si, patch) => setCards((cs) => cs.map((c, i) => (i !== ci ? c : { ...c, sections: c.sections.map((s, j) => (j === si ? { ...s, ...patch } : s)) })));
+  const submit = () => {
+    if (wordsOf(cards) === wordsOf(brief.deliveredCards)) return setError('You have not changed anything yet. Edit the task on the right first.');
+    setError('');
+    return send.mutate();
+  };
+  return (
+    <Modal
+      wide
+      title="Edit task"
+      onClose={onClose}
+      footer={
+        <>
+          <div className="actions">
+            <Button onClick={submit} busy={send.isPending}>Send to {brief.employeeName}</Button>
+            <Button variant="ghost" onClick={onClose}>Cancel</Button>
+          </div>
+          <p className="muted small">Nothing has been sent yet. Edit the task on the right, then send it. {brief.employeeName} will be asked to check it again.</p>
+        </>
+      }
+    >
+      {brief.flag?.reason && (
+        <Alert tone="warning" title={`${brief.employeeName} flagged this task as wrong`}>
+          <p>{brief.flag.reason}</p>
+        </Alert>
+      )}
+      <div className="dual">
+        <div>
+          <h3>Original brief</h3>
+          <OriginalText text={brief.originalText} />
+        </div>
+        <div>
+          <h3>What they receive</h3>
+          <div className="stack">
+            {cards.map((c, ci) => (
+              <div className="task task-edit" key={c.index ?? ci}>
+                {cards.length > 1 && <p className="muted small">Message {ci + 1} of {cards.length}</p>}
+                {c.sections.map((s, si) => (
+                  <EditSection key={`${s.key}-${si}`} s={s} onChange={(patch) => setSection(ci, si, patch)} />
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+      {error && <Alert tone="danger"><p>{error}</p></Alert>}
+      <ErrorAlert error={send.error} />
+    </Modal>
+  );
+}
+
 export default function TaskDetail() {
   const { id } = useParams();
   const qc = useQueryClient();
   const toast = useToast();
   const [showOriginal, setShowOriginal] = useState(false);
+  const [correcting, setCorrecting] = useState(false);
   const { data, isLoading, error } = useQuery({ queryKey: ['brief', id], queryFn: () => api.get(`/api/briefs/${id}`) });
   const mutation = useMutation({
     mutationFn: ({ action, body }) => api.post(`/api/briefs/${id}/${action}`, body || {}),
@@ -153,6 +251,8 @@ export default function TaskDetail() {
   const isManager = brief.viewerRole === 'manager';
   const cards = brief.deliveredCards;
   const title = brief.result?.summaries?.[0]?.title || 'Task';
+  const corrected = brief.deliveredVersion === 'manager_edited' && brief.managerEditedCards?.length > 0;
+  const canCorrect = isManager && brief.employeeStatus === 'flagged' && !['cancelled', 'superseded', 'draft', 'held'].includes(brief.status);
 
   return (
     <>
@@ -180,7 +280,8 @@ export default function TaskDetail() {
         <>
           <ManagerPanel brief={brief} act={act} busy={busy} />
           <Card title="Side by side">
-            <DualView original={brief.originalText} cards={brief.result?.cards || []} translatedLabel={brief.status === 'held' ? 'Formatted version (held)' : `What ${brief.employeeName} received`} />
+            <DualView original={brief.originalText} cards={corrected ? cards : brief.result?.cards || []} translatedLabel={brief.status === 'held' ? 'Formatted version (held)' : `What ${brief.employeeName} received`} />
+            {corrected && <p className="muted small">You corrected this version after {brief.employeeName} flagged it.</p>}
           </Card>
         </>
       ) : (
@@ -235,7 +336,23 @@ export default function TaskDetail() {
         </Card>
       )}
       {isManager && !['cancelled', 'superseded'].includes(brief.status) && (
-        <Button variant="danger" onClick={() => window.confirm('Withdraw this task? The employee will be told.') && act('cancel')}>Withdraw this task</Button>
+        <div className="actions">
+          {canCorrect && <Button onClick={() => setCorrecting(true)}>Edit task</Button>}
+          <Button variant="danger" onClick={() => window.confirm('Withdraw this task? The employee will be told.') && act('cancel')}>Withdraw this task</Button>
+        </div>
+      )}
+      {correcting && (
+        <CorrectTask
+          brief={brief}
+          onClose={() => setCorrecting(false)}
+          onSent={(res) => {
+            qc.setQueryData(['brief', id], res);
+            qc.invalidateQueries({ queryKey: ['briefs'] });
+            qc.invalidateQueries({ queryKey: ['dashboard'] });
+            setCorrecting(false);
+            toast(`The corrected task was sent to ${brief.employeeName}.`);
+          }}
+        />
       )}
     </>
   );

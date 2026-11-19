@@ -281,6 +281,33 @@ th { font-size: 0.88rem; text-transform: uppercase; letter-spacing: 0.03em; colo
 
 .rule-card { border: 1px solid var(--border); border-radius: var(--radius); padding: 0.9rem 1rem; background: var(--surface); }
 .rule-card h3 { margin-bottom: 0.25rem; }
+.rule-card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.75rem; }
+.rule-card-head .badge { flex-shrink: 0; margin-top: 0.2rem; }
+.btn-icon { min-width: 44px; padding: 0; font-size: 1.5rem; line-height: 1; flex-shrink: 0; }
+.btn-icon.btn-small { min-width: 36px; font-size: 1.35rem; }
+
+/* Pop-ups (native <dialog>) */
+.modal {
+  width: min(36rem, calc(100vw - 2rem)); max-height: calc(100vh - 2rem); padding: 0;
+  border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--text);
+  box-shadow: 0 12px 32px rgb(16 24 40 / 28%);
+}
+.modal[open] { display: flex; flex-direction: column; }
+.modal-wide { width: min(66rem, calc(100vw - 2rem)); }
+.modal::backdrop { background: rgb(16 24 40 / 55%); }
+.modal-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.75rem; padding: 1rem 1.25rem 0.5rem; }
+.modal-title { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+.modal-title h2 { margin: 0; font-size: 1.25rem; }
+.modal-body { padding: 0.5rem 1.25rem 1rem; overflow-y: auto; flex: 1 1 auto; }
+.modal-footer { padding: 0.85rem 1.25rem 1rem; border-top: 1px solid var(--border); }
+.modal-footer > p { margin: 0.6rem 0 0; }
+:root[data-contrast='high'] .modal::backdrop { background: rgb(0 0 0 / 70%); }
+
+/* Correcting a flagged task: each part of the task is a labelled box. */
+.task-edit .field { margin-bottom: 0.75rem; }
+.task-edit .step-row { display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.4rem; }
+.task-edit .step-row > span { font-weight: 700; min-width: 1.5rem; text-align: right; }
+.task-edit .heading { font-weight: 700; margin: 0.5rem 0; }
 .rule-meta { display: flex; gap: 0.4rem; flex-wrap: wrap; margin: 0.4rem 0; }
 
 .steps-progress { display: flex; gap: 0.5rem; list-style: none; padding: 0; margin: 0 0 1rem; flex-wrap: wrap; counter-reset: step; }

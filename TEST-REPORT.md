@@ -1,7 +1,7 @@
 # BarrierFix MVP: test report
 
-**Date:** 11 November 2026
-**Result:** 127 automated tests, 127 passing, 0 failing (`npm test`). Web app build passes (`npm run build`).
+**Date:** 11 November 2026, updated 19 November 2026 (client feedback, see the last section)
+**Result:** 137 automated tests, 137 passing, 0 failing (`npm test`). Web app build passes (`npm run build`).
 **Email (SMTP): not yet tested.** Emails are captured in the Dev mailbox instead; real delivery has not been tried.
 
 ## How it was tested
@@ -15,7 +15,8 @@
    | `requests.test.js` | 14 | Adjustment requests: both directions, accept, reject, HR review, six questions, HR final call, withdrawal, no-HR company, lists, versions, exports, reminders, conversion of older records |
    | `scope.test.js` | 30 | Every MVP feature against the scope: profiles, preview-before-send (form and CSV), tasks, meetings, reviews and their reminders, notifications, dashboards, settings, audit, digest, leaving, retention and erasure, health check |
    | `security.test.js` | 10 | Company data isolation (24 cross-company calls), role checks on 33 endpoints, injection-shaped input, mass assignment, lock-out, request size |
-   | `slack.test.js` | 10 | Mention preview and confirm, `/brief`, the shortcut, missing details, employee buttons, edits and deletes, email matching, App Home, delivery failure |
+   | `slack.test.js` | 11 | Mention preview and confirm, `/brief`, the shortcut, missing details, employee buttons, a corrected task replacing the Slack message, edits and deletes, email matching, App Home, delivery failure |
+   | `feedback.test.js` | 9 | Client feedback of 19 Nov 2026: requesting a rule from the Rule Library, correcting a task flagged as wrong, the manager's home page figures |
    | `realtime.test.js` | 5 | Live updates reach only the right people; closed accounts and suspended companies are cut off |
    | `slack-blocks`, `utils`, `evaluation` | 9 | Slack message layout, retry, log redaction, passwords, health check, the release gate on the evaluation test set |
 
@@ -95,3 +96,30 @@ Each has tests that failed before the change and pass now (the People layout was
 - **Go-live steps:**
   - Create the uptime monitor account.
   - Decide whether an error-tracking service (Sentry) is wanted; it was not part of this MVP.
+
+## Client feedback changes (19 Nov 2026)
+
+From `MVP feedback.docx`. Only these changes were made. The fourth item in the feedback summary, "UI changes", is postponed and has not been started.
+
+1. **Request a rule from the Rule Library (employee).**
+   - Each rule card has a **+** at the top right. A rule already in the profile shows its status there instead ("Agreed", "Waiting for agreement").
+   - **+** opens a pop-up like the rule card on the profile page: the name with "Not saved yet", the summary, the group and type, any settings, and "Note (optional)".
+   - **Save changes** sends the rule to the manager to agree (`POST /api/profiles/me/rules`). The profile and the rule then show "Waiting for agreement". Agreed rules keep applying until then.
+   - Someone who has never agreed to BarrierFix applying rules is asked to tick that box in the pop-up first.
+2. **Edit a task that was flagged as wrong (manager).**
+   - When the employee flags a task, the sender's task page shows **Edit task** next to "Withdraw this task".
+   - It opens a pop-up like the Send preview: the original brief on the left, and what the employee receives on the right, as boxes to edit.
+   - **Send to {employee}** delivers the corrected version (`POST /api/briefs/:id/correct`):
+     - it replaces the task in BarrierFix and in Slack, where the message is updated with its buttons back;
+     - the employee is told, and checks it again;
+     - it can be flagged and corrected again.
+   - The layout of the agreed format cannot be changed, only the wording, and no part can be left empty. If a time is changed, the automatic reminders for the old time are switched off, and the conversation says so.
+3. **Manager home page figures.** Three sections replace the old "Last 30 days" row, with the labels from the mock-up. They count the manager's own team only. "Pending" figures are what is waiting today; the others count the last 30 days. They are part of the Professional plan, like the row they replace.
+
+Checks:
+- **Automated:** 9 new tests in `feedback.test.js` and 1 in `slack.test.js`, written first and failing before the change, all passing now. The full suite passes (137).
+- **Browser, on the local copy:**
+  - An employee requested two rules from the library: an out-of-range setting was refused, and both rules then showed "Waiting for agreement" on the profile.
+  - The pop-up closes with Escape and keyboard focus is kept. It fits a phone screen (375 px).
+  - The manager's home figures matched a count taken straight from the database.
+  - A task was sent, flagged by the employee, then corrected by the manager. Sending with no change was refused. The employee saw the corrected step, "checked and edited this version for you", and a notification.

@@ -89,3 +89,14 @@ The rows below show what that means for each original requirement.
 | 062 | Adjustment Library management | Built | Create, edit, categorise, approve and retire; every change versioned and audited |
 | 063 | Data minimisation in decision records | Built | Medical-term warning on every free-text box; PDF and CSV exports mask health terms unless HR asks for the full text (audited) |
 | 064 | Decision Record acceptance tests | Built | `server/test/requests.test.js`: both directions, accept, reject, HR review, six questions, HR final call, withdrawal, no-HR company, lists, versions, exports, reminders, conversion of older records |
+
+## Client feedback, 19 Nov 2026 (`MVP feedback.docx`)
+
+| # | Feedback | Status | Where / notes |
+|---|---|---|---|
+| F1 | Employee adds or requests an adjustment directly from the Rule Library | Built | "+" on each rule card opens the profile-style pop-up; **Save changes** sends it to the manager (`POST /api/profiles/me/rules`). The rule shows "Waiting for agreement" in the library and the profile. `client/src/pages/RuleLibrary.jsx`, `server/src/modules/profiles/routes.js` |
+| F2 | Manager edits or corrects a task flagged as wrong, besides "Withdraw this task" | Built | **Edit task** opens a preview-style pop-up (original left, editable version right). **Send to {employee}** replaces the delivered version in the web app and in Slack (`POST /api/briefs/:id/correct`). Only the wording can change; a changed time switches off reminders for the old time. `client/src/pages/TaskDetail.jsx`, `server/src/modules/briefs/service.js` |
+| F3 | Manager home page analytics | Built | Adjustment Decision Record, Tasks and Reviews sections, for the manager's own team (Professional and Enterprise plans). `client/src/pages/Home.jsx`, `server/src/modules/dashboard/service.js` |
+| F4 | UI changes (in the feedback summary; not described in the document) | Postponed | Not started; to be done later. What it covers needs confirming first |
+
+Tests: `server/test/feedback.test.js` (9) and one Slack test in `server/test/slack.test.js`.

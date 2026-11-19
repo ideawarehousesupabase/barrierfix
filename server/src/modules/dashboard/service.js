@@ -83,6 +83,34 @@ export async function employeeDashboard(user) {
   };
 }
 
+// The manager's home page figures (client feedback, Nov 2026), for this manager's own team only.
+// "Pending" figures are what is waiting today; the others count the last 30 days.
+async function managerAnalytics(user, profiles, unansweredQuestions) {
+  const now = new Date();
+  const since = new Date(now.getTime() - 30 * DAY);
+  const soon = new Date(now.getTime() + 30 * DAY);
+  const pair = { managerId: user._id };
+  const sentRules = profiles.filter((p) => p.status === 'proposed').flatMap((p) => p.rules.filter((r) => r.status === 'proposed' || (r.status === 'agreed' && r.pending)));
+  const rulesAgreed = profiles.flatMap((p) => p.rules.filter((r) => r.status === 'agreed' && r.agreedAt && r.agreedAt >= since));
+  const [requestsPending, requestsAgreed, requestsDeclined, requestsWithHr, tasks, flagged, reviewsPending, reviewsCompleted, reviewsUpcoming] = await Promise.all([
+    DecisionRecord.countDocuments({ ...pair, status: 'pending' }),
+    DecisionRecord.countDocuments({ ...pair, status: { $in: ['accepted', 'overturned'] }, updatedAt: { $gte: since } }),
+    DecisionRecord.countDocuments({ ...pair, status: 'rejected', updatedAt: { $gte: since } }),
+    DecisionRecord.countDocuments({ ...pair, status: { $in: ['hr_review', 'answering', 'hr_final'] } }),
+    BriefMetric.countDocuments({ managerId: user._id, createdAt: { $gte: since } }),
+    Brief.countDocuments({ managerId: user._id, employeeStatus: 'flagged', status: { $nin: ['cancelled', 'superseded', 'draft'] } }),
+    Review.countDocuments({ managerId: user._id, status: 'open' }),
+    Review.countDocuments({ managerId: user._id, status: 'completed', updatedAt: { $gte: since } }),
+    Review.countDocuments({ managerId: user._id, status: 'scheduled', dueAt: { $gte: now, $lte: soon } }),
+  ]);
+  return {
+    periodDays: 30,
+    decisions: { pending: sentRules.length + requestsPending, agreed: rulesAgreed.length + requestsAgreed, declined: requestsDeclined, pendingHr: requestsWithHr },
+    tasks: { delivered: tasks, questionsPending: unansweredQuestions, flaggedPending: flagged },
+    reviews: { pending: reviewsPending, completed: reviewsCompleted, upcoming: reviewsUpcoming },
+  };
+}
+
 export async function managerDashboard(user, org) {
   const team = await User.find({ orgId: org._id, managerId: user._id, status: { $in: ['active', 'invited'] } }).sort({ name: 1 });
   const teamIds = team.map((t) => t._id);
@@ -118,6 +146,7 @@ export async function managerDashboard(user, org) {
     toDo: { heldTranslations: held, unansweredQuestions: unanswered, decisionsToMake: decisions, reviewsToAnswer: reviews, profilesToAgree: waitingProfiles },
     kpis: detailed ? await briefKpis({ managerId: user._id }) : null,
     rules: detailed ? await ruleEffectiveness({ managerId: user._id }) : null,
+    analytics: detailed ? await managerAnalytics(user, profiles, unanswered) : null,
   };
 }
 
